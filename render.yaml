@@ -1,0 +1,101 @@
+# render.yaml — Infrastructure as Code for Render.com
+# Docs: https://render.com/docs/blueprint-spec
+# Deploy: connect your GitHub repo in the Render dashboard
+# and select "Use Blueprint" or push this file to trigger auto-setup.
+
+services:
+  # ─── Backend Web Service ──────────────────────────────────────────────────
+  - type: web
+    name: school-mgmt-api
+    runtime: node
+    plan: free                      # Free tier: 512 MB RAM, 0.1 CPU, spins down after 15 min
+    region: oregon                  # us-west-2 — closest to Neon's default region
+    rootDir: backend
+    buildCommand: |
+      npm install
+      npx prisma generate
+      npm run build
+    startCommand: |
+      npx prisma migrate deploy && node dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true                # Auto-deploy on push to main branch
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+
+      # Database — set in Render dashboard or via `render env set`
+      - key: DATABASE_URL
+        sync: false                 # Do not expose in repo — set manually
+      - key: DIRECT_URL
+        sync: false
+
+      # JWT secrets — generate with: openssl rand -base64 32
+      - key: JWT_ACCESS_SECRET
+        generateValue: false        # Set manually — needs to be stable across deploys
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        generateValue: false
+        sync: false
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # Frontend URL (update after Vercel deploy)
+      - key: FRONTEND_URL
+        value: https://your-app.vercel.app  # UPDATE THIS
+
+      # Redis (Upstash)
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
+      # Email (SendGrid)
+      - key: EMAIL_HOST
+        value: smtp.sendgrid.net
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        value: apikey
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@yourschool.edu   # UPDATE THIS
+      - key: EMAIL_FROM_NAME
+        value: School Management System
+
+      # Stripe (use test keys for MVP)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CURRENCY
+        value: usd
+
+      # Cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Twilio (optional)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+      # Security
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX
+        value: "100"
