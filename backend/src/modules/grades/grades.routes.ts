@@ -92,19 +92,23 @@ const bulkSubmitGrades = asyncHandler(async (req: Request, res: Response) => {
   const exam = await prisma.exam.findUnique({ where: { id: examId }, select: { totalMarks: true } });
   if (!exam) { sendNotFound(res, "Exam"); return; }
 
-  const upsertOperations = await Promise.all(
+  const gradedItems = await Promise.all(
     grades.map(async (g) => {
       const percentage = (g.marksObtained / Number(exam.totalMarks)) * 100;
       const { grade, gpa } = await calculateLetterGrade(percentage);
-      return prisma.grade.upsert({
-        where: { studentId_examId: { studentId: g.studentId, examId } },
-        create: { studentId: g.studentId, examId, subjectId, marksObtained: g.marksObtained, grade, gpa, feedback: g.feedback },
-        update: { marksObtained: g.marksObtained, grade, gpa, feedback: g.feedback },
-      });
+      return { ...g, grade, gpa };
     })
   );
 
-  const results = await prisma.$transaction(upsertOperations);
+  const results = await prisma.$transaction(
+    gradedItems.map((g) =>
+      prisma.grade.upsert({
+        where: { studentId_examId: { studentId: g.studentId, examId } },
+        create: { studentId: g.studentId, examId, subjectId, marksObtained: g.marksObtained, grade: g.grade, gpa: g.gpa, feedback: g.feedback },
+        update: { marksObtained: g.marksObtained, grade: g.grade, gpa: g.gpa, feedback: g.feedback },
+      })
+    )
+  );
   sendCreated(res, { count: results.length }, `${results.length} grades recorded`);
 });
 

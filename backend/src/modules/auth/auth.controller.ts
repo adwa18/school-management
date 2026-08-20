@@ -31,7 +31,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     sendBadRequest(res, "Validation failed", errors); return;
   }
   try {
-    const user = await authService.register(parsed.data);
+    const user = await authService.register(parsed.data as any);
     sendCreated(res, user, "Registration successful. Please check your email to verify your account.");
   } catch (err: any) {
     if (err.message === "EMAIL_TAKEN") { sendError(res, "An account with this email already exists", 409); return; }

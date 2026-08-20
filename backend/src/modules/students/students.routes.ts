@@ -30,11 +30,30 @@ const createStudentSchema = z.object({
 
 const updateStudentSchema = createStudentSchema.partial().omit({ email: true, password: true });
 
-// ─── Service Functions ────────────────────────────────────────────────────────
+// ─── Select shape ─────────────────────────────────────────────────────────────
 const studentSelect = {
-  id: true, studentId: true, admissionDate: true, bloodGroup: true,
-  address: true, city: true, guardianName: true, guardianPhone: true, medicalNotes: true,
-  user: { select: { id: true, email: true, firstName: true, lastName: true, phone: true, gender: true, avatarUrl: true, isActive: true } },
+  id: true,
+  studentId: true,
+  admissionDate: true,
+  bloodGroup: true,
+  address: true,
+  city: true,
+  guardianName: true,
+  guardianPhone: true,
+  medicalNotes: true,
+  userId: true,
+  user: {
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      gender: true,
+      avatarUrl: true,
+      isActive: true,
+    },
+  },
   class: { select: { id: true, name: true, grade: true, section: true } },
 };
 
@@ -57,7 +76,13 @@ const listStudents = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const [students, total] = await Promise.all([
-    prisma.student.findMany({ where, select: studentSelect, skip, take: limit, orderBy: { user: { firstName: "asc" } } }),
+    prisma.student.findMany({
+      where,
+      select: studentSelect,
+      skip,
+      take: limit,
+      orderBy: { user: { firstName: "asc" } },
+    }),
     prisma.student.count({ where }),
   ]);
 
@@ -70,7 +95,15 @@ const getStudent = asyncHandler(async (req: Request, res: Response) => {
     where: { id },
     select: {
       ...studentSelect,
-      parents: { include: { parent: { include: { user: { select: { firstName: true, lastName: true, email: true, phone: true } } } } } },
+      parents: {
+        include: {
+          parent: {
+            include: {
+              user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!student) { sendNotFound(res, "Student"); return; }
@@ -88,13 +121,27 @@ const createStudent = asyncHandler(async (req: Request, res: Response) => {
   const bcrypt = await import("bcryptjs");
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Generate student ID
   const count = await prisma.student.count();
   const studentId = `STU-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`;
+
+  // Use a two-step approach: create user first, then student
+  const user = await prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      role: "STUDENT",
+      firstName,
+      lastName,
+      phone,
+      gender: gender as any,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+    },
+  });
 
   const student = await prisma.student.create({
     data: {
       studentId,
+      userId: user.id,
       admissionDate: new Date(studentData.admissionDate),
       bloodGroup: studentData.bloodGroup,
       address: studentData.address,
@@ -103,17 +150,12 @@ const createStudent = asyncHandler(async (req: Request, res: Response) => {
       guardianPhone: studentData.guardianPhone,
       medicalNotes: studentData.medicalNotes,
       classId: studentData.classId,
-      user: {
-        create: {
-          email, passwordHash, role: "STUDENT", firstName, lastName, phone, gender: gender as any,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        },
-      },
     },
     select: studentSelect,
   });
 
-  await prisma.notificationPreference.create({ data: { userId: student.user.id } });
+  await prisma.notificationPreference.create({ data: { userId: user.id } });
+
   sendCreated(res, student, "Student created successfully");
 });
 
@@ -125,7 +167,9 @@ const updateStudent = asyncHandler(async (req: Request, res: Response) => {
   const existing = await prisma.student.findUnique({ where: { id } });
   if (!existing) { sendNotFound(res, "Student"); return; }
 
-  const { firstName, lastName, phone, gender, dateOfBirth, ...studentData } = parsed.data;
+  const { firstName, lastName, phone, gender, dateOfBirth, classId, bloodGroup, address, city, guardianName, guardianPhone, medicalNotes } = parsed.data;
+
+  // Update user fields if provided
   const userUpdateData: any = {};
   if (firstName) userUpdateData.firstName = firstName;
   if (lastName) userUpdateData.lastName = lastName;
@@ -133,18 +177,23 @@ const updateStudent = asyncHandler(async (req: Request, res: Response) => {
   if (gender) userUpdateData.gender = gender;
   if (dateOfBirth) userUpdateData.dateOfBirth = new Date(dateOfBirth);
 
+  if (Object.keys(userUpdateData).length > 0) {
+    await prisma.user.update({ where: { id: existing.userId }, data: userUpdateData });
+  }
+
+  // Update student fields
+  const studentUpdateData: any = {};
+  if (classId) studentUpdateData.classId = classId;
+  if (bloodGroup) studentUpdateData.bloodGroup = bloodGroup;
+  if (address) studentUpdateData.address = address;
+  if (city) studentUpdateData.city = city;
+  if (guardianName) studentUpdateData.guardianName = guardianName;
+  if (guardianPhone) studentUpdateData.guardianPhone = guardianPhone;
+  if (medicalNotes) studentUpdateData.medicalNotes = medicalNotes;
+
   const student = await prisma.student.update({
     where: { id },
-    data: {
-      ...(studentData.classId && { classId: studentData.classId }),
-      ...(studentData.bloodGroup && { bloodGroup: studentData.bloodGroup }),
-      ...(studentData.address && { address: studentData.address }),
-      ...(studentData.city && { city: studentData.city }),
-      ...(studentData.guardianName && { guardianName: studentData.guardianName }),
-      ...(studentData.guardianPhone && { guardianPhone: studentData.guardianPhone }),
-      ...(studentData.medicalNotes && { medicalNotes: studentData.medicalNotes }),
-      ...(Object.keys(userUpdateData).length > 0 && { user: { update: userUpdateData } }),
-    },
+    data: studentUpdateData,
     select: studentSelect,
   });
 
@@ -155,8 +204,6 @@ const deleteStudent = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const existing = await prisma.student.findUnique({ where: { id } });
   if (!existing) { sendNotFound(res, "Student"); return; }
-
-  // Soft delete — deactivate the user account
   await prisma.user.update({ where: { id: existing.userId }, data: { isActive: false } });
   sendSuccess(res, null, "Student deactivated successfully");
 });
@@ -176,9 +223,11 @@ const getStudentAttendanceSummary = asyncHandler(async (req: Request, res: Respo
     _count: true,
   });
 
-  const summary = { PRESENT: 0, ABSENT: 0, LATE: 0, EXCUSED: 0, total: 0 };
+  const summary: any = { PRESENT: 0, ABSENT: 0, LATE: 0, EXCUSED: 0, total: 0 };
   records.forEach((r) => { summary[r.status] = r._count; summary.total += r._count; });
-  const attendanceRate = summary.total > 0 ? Math.round(((summary.PRESENT + summary.LATE) / summary.total) * 100) : 0;
+  const attendanceRate = summary.total > 0
+    ? Math.round(((summary.PRESENT + summary.LATE) / summary.total) * 100)
+    : 0;
 
   sendSuccess(res, { ...summary, attendanceRate });
 });
@@ -187,7 +236,10 @@ const getStudentGrades = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const grades = await prisma.grade.findMany({
     where: { studentId: id },
-    include: { exam: { select: { name: true, type: true, totalMarks: true } }, subject: { select: { name: true, code: true } } },
+    include: {
+      exam: { select: { name: true, type: true, totalMarks: true } },
+      subject: { select: { name: true, code: true } },
+    },
     orderBy: { gradedAt: "desc" },
   });
   sendSuccess(res, grades);

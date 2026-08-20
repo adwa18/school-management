@@ -58,8 +58,17 @@ const createFee = asyncHandler(async (req: Request, res: Response) => {
   const parsed = createFeeSchema.safeParse(req.body);
   if (!parsed.success) { sendBadRequest(res, "Validation failed"); return; }
 
+  const { classId, academicYearId, feeStructureId, studentId, dueDate, amount, ...rest } = parsed.data;
   const fee = await prisma.fee.create({
-    data: { ...parsed.data, amount: parsed.data.amount, dueDate: new Date(parsed.data.dueDate) },
+    data: {
+      ...rest,
+      amount,
+      dueDate: new Date(dueDate),
+      student: { connect: { id: studentId } },
+      ...(classId && { class: { connect: { id: classId } } }),
+      ...(academicYearId && { academicYear: { connect: { id: academicYearId } } }),
+      ...(feeStructureId && { feeStructure: { connect: { id: feeStructureId } } }),
+    } as any,
     include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
   });
 
