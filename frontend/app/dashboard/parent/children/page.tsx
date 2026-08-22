@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { parentsApi, studentsApi, gradesApi, assignmentsApi } from "@/lib/api";
@@ -13,13 +13,17 @@ export default function ParentChildrenPage() {
 
   const { data: childrenData, isLoading } = useQuery({
     queryKey: ["parent-children"],
-    queryFn: () => parentsApi.myChildren().then((r) => r.data.data),
-    onSuccess: (data: any[]) => {
-      if (data?.length > 0 && !activeChildId) setActiveChildId(data[0].student.id);
-    },
-  } as any);
+    queryFn: () => parentsApi.myChildren().then((r) => r.data.data as any[]),
+  });
 
-  const children = childrenData ?? [];
+  // Add this useEffect right below the useQuery call
+  useEffect(() => {
+    if (childrenData && Array.isArray(childrenData) && childrenData.length > 0 && !activeChildId) {
+      setActiveChildId(childrenData[0].student.id);
+    }
+  }, [childrenData]);  
+
+  const children : any[] = Array.isArray(childrenData) ? childrenData : [];
   const activeChild = children.find((c: any) => c.student.id === activeChildId)?.student;
 
   const { data: reportCard } = useQuery({
@@ -237,9 +241,9 @@ export default function ParentChildrenPage() {
                 <div className="px-6 py-4 border-b bg-muted/40">
                   <h3 className="font-semibold">Recent Assignments</h3>
                 </div>
-                {assignments?.length > 0 ? (
+                {(assignments?.length ?? 0) > 0 ? (
                   <div className="divide-y">
-                    {assignments.map((a: any) => {
+                    {(assignments ?? []).map((a: any) => {
                       const isOverdue = new Date(a.dueDate) < new Date();
                       return (
                         <div key={a.id} className="flex items-center gap-4 px-6 py-4">

@@ -41,7 +41,7 @@ export default function TeacherGradesPage() {
   const { data: analytics } = useQuery({
     queryKey: ["grade-analytics", selectedExamId],
     queryFn: () => gradesApi.analytics({ examId: selectedExamId }).then((r) => r.data.data),
-    enabled: !!selectedExamId && (existingGrades?.length ?? 0) > 0,
+    enabled: !!selectedExamId && ((existingGrades as any[])?.length ?? 0) > 0,
   });
 
   const bulkMutation = useMutation({
@@ -137,18 +137,18 @@ export default function TeacherGradesPage() {
             {/* Grade entry table */}
             {loadingStudents ? (
               <div className="flex items-center justify-center h-40"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-            ) : classStudents?.length > 0 ? (
+            ) : (classStudents as any[])?.length > 0 ? (
               <div className="rounded-xl border bg-card overflow-hidden">
                 <div className="px-4 py-3 border-b bg-muted/40 flex items-center justify-between">
                   <span className="text-sm font-medium">
-                    {classStudents.length} Students — Enter marks out of {totalMarks}
+                    {(classStudents as any[])?.length ?? 0} Students — Enter marks out of {totalMarks}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {Object.values(marks).filter(Boolean).length}/{classStudents.length} entered
+                    {Object.values(marks).filter(Boolean).length}/{(classStudents as any[])?.length ?? 0} entered
                   </span>
                 </div>
                 <div className="divide-y">
-                  {classStudents.map((student: any, i: number) => {
+                  {(classStudents ?? []).map((student: any, i: number) => {
                     const raw = marks[student.id] ?? "";
                     const num = parseFloat(raw);
                     const pct = !isNaN(num) && raw !== "" ? Math.round((num / totalMarks) * 100) : null;

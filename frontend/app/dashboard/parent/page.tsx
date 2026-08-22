@@ -153,8 +153,8 @@ export default function ParentDashboardPage() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  {fees?.data?.length > 0 ? (
-                    fees.data.slice(0, 4).map((fee: any) => (
+                  {(fees?.data?.length ?? 0) > 0 ? (
+                    (fees?.data ?? []).slice(0, 4).map((fee: any) => (
                       <div key={fee.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                         <div>
                           <p className="text-sm font-medium">{fee.description}</p>
@@ -190,8 +190,8 @@ export default function ParentDashboardPage() {
                   <Link href="/dashboard/parent/announcements" className="text-xs text-primary hover:underline">View all</Link>
                 </div>
                 <div className="space-y-3">
-                  {announcements?.length > 0 ? (
-                    announcements.map((a: any) => (
+                  {(announcements?.length ?? 0) > 0 ? (
+                    (announcements ?? []).map((a: any) => (
                       <div key={a.id} className={`p-3 rounded-lg ${a.isPinned ? "bg-blue-50 border border-blue-100" : "bg-muted/30"}`}>
                         {a.isPinned && <span className="text-xs font-semibold text-blue-600">📌 Pinned</span>}
                         <p className="text-sm font-medium">{a.title}</p>

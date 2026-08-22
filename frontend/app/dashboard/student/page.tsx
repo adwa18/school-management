@@ -84,8 +84,8 @@ export default function StudentDashboardPage() {
               </Link>
             </div>
             <div className="space-y-3">
-              {assignments?.length > 0 ? (
-                assignments.slice(0, 5).map((a: any) => {
+              {(assignments?.length ?? 0) > 0 ? (
+                (assignments ?? []).slice(0, 5).map((a: any) => {
                   const dueDate = new Date(a.dueDate);
                   const isOverdue = dueDate < new Date();
                   const daysLeft = Math.ceil((dueDate.getTime() - Date.now()) / 86400000);
@@ -127,8 +127,8 @@ export default function StudentDashboardPage() {
               <Link href="/dashboard/student/announcements" className="text-xs text-primary hover:underline">View all</Link>
             </div>
             <div className="space-y-3">
-              {announcements?.length > 0 ? (
-                announcements.map((a: any) => (
+              {(announcements?.length ?? 0) > 0 ? (
+                (announcements ?? []).map((a: any) => (
                   <div key={a.id} className={`p-3 rounded-lg ${a.isPinned ? "bg-blue-50 border border-blue-100" : "bg-muted/30"}`}>
                     {a.isPinned && (
                       <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">📌 Pinned</span>
@@ -159,7 +159,7 @@ export default function StudentDashboardPage() {
               { label: "Absent", value: attSummary?.ABSENT ?? 0, color: "text-red-700 bg-red-50 border-red-100" },
               { label: "Late", value: attSummary?.LATE ?? 0, color: "text-amber-700 bg-amber-50 border-amber-100" },
               { label: "Excused", value: attSummary?.EXCUSED ?? 0, color: "text-blue-700 bg-blue-50 border-blue-100" },
-              { label: "Rate", value: `${attSummary?.attendanceRate ?? 0}%`, color: attSummary?.attendanceRate >= 75 ? "text-green-700 bg-green-50 border-green-100" : "text-red-700 bg-red-50 border-red-100" },
+              { label: "Rate", value: `${attSummary?.attendanceRate ?? 0}%`, color: (attSummary?.attendanceRate ?? 0) >= 75 ? "text-green-700 bg-green-50 border-green-100" : "text-red-700 bg-red-50 border-red-100" },
             ].map((item) => (
               <div key={item.label} className={`rounded-xl border p-4 text-center ${item.color}`}>
                 <p className="text-2xl font-bold">{item.value}</p>
@@ -167,7 +167,7 @@ export default function StudentDashboardPage() {
               </div>
             ))}
           </div>
-          {attSummary?.attendanceRate < 75 && (
+          {(attSummary?.attendanceRate ?? 0) < 75 && (
             <div className="mt-4 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-100">
               <Clock className="h-4 w-4 shrink-0" />
               Your attendance is below the 75% requirement. Please contact your class teacher.

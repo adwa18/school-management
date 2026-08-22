@@ -118,8 +118,8 @@ export default function TeacherDashboardPage() {
               </Link>
             </div>
             <div className="space-y-3">
-              {myAssignments?.length > 0 ? (
-                myAssignments.slice(0, 4).map((a: any) => {
+              {(myAssignments?.length ?? 0) > 0 ? (
+                (myAssignments ?? []).slice(0, 4).map((a: any) => {
                   const isOverdue = new Date(a.dueDate) < new Date();
                   return (
                     <Link

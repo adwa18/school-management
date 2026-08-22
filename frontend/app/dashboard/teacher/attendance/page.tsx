@@ -30,7 +30,7 @@ export default function TeacherAttendancePage() {
 
   const { data: todayData, isLoading: loadingStudents } = useQuery({
     queryKey: ["today-attendance", selectedClassId, date],
-    queryFn: () => attendanceApi.todayForClass(selectedClassId).then((r) => r.data.data),
+    queryFn: () => attendanceApi.todayForClass(selectedClassId).then((r) => r.data.data as any),
     enabled: !!selectedClassId,
     onSuccess: (data: any) => {
       // Pre-fill existing attendance
@@ -51,7 +51,7 @@ export default function TeacherAttendancePage() {
     },
   });
 
-  const students = todayData?.students ?? [];
+  const students : any[] = (todayData as any)?.students ?? [];
 
   const markAll = (status: AttStatus) => {
     const all: Record<string, AttStatus> = {};
