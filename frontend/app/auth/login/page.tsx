@@ -67,6 +67,7 @@ export default function LoginPage() {
       }
 
       const { accessToken } = result as { accessToken: string };
+      useAuthStore.getState().setAccessToken(accessToken);
       const meRes = await authApi.me();
 
       setAuth(meRes.data.data, accessToken);
