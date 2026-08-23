@@ -32,6 +32,7 @@ import notificationRoutes from "./modules/notifications/notifications.routes";
 import reportRoutes from "./modules/reports/reports.routes";
 
 const app = express();
+app.set("trust proxy", 1);
 
 // ─── Security Headers ──────────────────────────────────────────────────────────
 app.use(
