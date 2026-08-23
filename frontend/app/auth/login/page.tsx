@@ -54,8 +54,10 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setServerError("");
+    console.log("Submitting login...", data.email);
     try {
       const res = await authApi.login(data.email, data.password);
+      console.log("Login response:", res.data);
       const result = res.data.data;
 
       if ("requiresMfa" in result && result.requiresMfa) {
@@ -73,6 +75,8 @@ export default function LoginPage() {
       const dest = redirect || ROLE_DASHBOARDS[meRes.data.data.role] || "/";
       router.replace(dest);
     } catch (err: any) {
+      console.error("Login error full:", err);
+      console.error("Login error response:", err.response?.data);
       const msg = err.response?.data?.error;
       if (msg === "Invalid email or password") setServerError("Incorrect email or password.");
       else if (msg?.includes("disabled")) setServerError("Your account has been disabled. Contact support.");
